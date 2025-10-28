@@ -227,24 +227,30 @@ async function startServer() {
         console.error('New StreamableHTTP POST request received');
         
         try {
-          const sessionId = req.body?.sessionId || 'default';
+          const requestedSessionId = req.body?.sessionId || req.headers['mcp-session-id'] || 'default';
           
           // Get or create transport for this session
-          let transport = transports.get(sessionId);
+          let transport = transports.get(requestedSessionId);
           if (!transport) {
-            console.error(`Creating new transport for session: ${sessionId}`);
+            console.error(`Creating new transport for session: ${requestedSessionId}`);
             transport = new StreamableHTTPServerTransport({
-              sessionId,
-              endpoint: '/message'
+              sessionIdGenerator: () => requestedSessionId,
+              onsessioninitialized: async (sessionId) => {
+                console.error(`Session initialized: ${sessionId}`);
+              },
+              onsessionclosed: async (sessionId) => {
+                console.error(`Session closed: ${sessionId}`);
+                transports.delete(sessionId);
+              }
             });
-            transports.set(sessionId, transport);
+            transports.set(requestedSessionId, transport);
             
             // Connect server to transport
             await server.connect(transport);
           }
           
-          // Handle the incoming message
-          await transport.handlePostMessage(req, res);
+          // Handle the incoming request (not handlePostMessage)
+          await transport.handleRequest(req, res, req.body);
           
         } catch (error) {
           console.error('Error handling message:', error);
