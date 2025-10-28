@@ -194,10 +194,47 @@ export function formatDuration(seconds: number): string {
 // --- Server Startup ---
 async function startServer() {
   try {
-    console.error("Starting Strava MCP Server...");
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error(`Strava MCP Server connected via Stdio. Tools registered.`);
+    const useHttp = process.env.USE_HTTP === 'true';
+    
+    if (useHttp) {
+      // HTTP/SSE transport for Docker deployment
+      const { SSEServerTransport } = await import("@modelcontextprotocol/sdk/server/sse.js");
+      const express = (await import('express')).default;
+      
+      const port = parseInt(process.env.PORT || '3000');
+      const app = express();
+      
+      console.error(`Starting Strava MCP Server on HTTP port ${port}...`);
+      
+      // Health check endpoint
+      app.get('/health', (_req, res) => {
+        res.json({ 
+          status: 'ok', 
+          name: 'Strava MCP Server',
+          version: '1.0.0',
+          transport: 'SSE'
+        });
+      });
+      
+      // SSE endpoint
+      app.get('/sse', async (_req, res) => {
+        console.error('New SSE connection request received');
+        const transport = new SSEServerTransport('/sse', res);
+        await server.connect(transport);
+      });
+      
+      app.listen(port, () => {
+        console.error(`Strava MCP Server listening on port ${port}`);
+        console.error(`Health check: http://localhost:${port}/health`);
+        console.error(`SSE endpoint: http://localhost:${port}/sse`);
+      });
+    } else {
+      // Stdio transport for local development
+      console.error("Starting Strava MCP Server via stdio...");
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+      console.error(`Strava MCP Server connected via Stdio. Tools registered.`);
+    }
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
