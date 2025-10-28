@@ -197,14 +197,20 @@ async function startServer() {
     const useHttp = process.env.USE_HTTP === 'true';
     
     if (useHttp) {
-      // HTTP/SSE transport for Docker deployment
-      const { SSEServerTransport } = await import("@modelcontextprotocol/sdk/server/sse.js");
+      // HTTP Streamable transport for Docker deployment
+      const { StreamableHTTPServerTransport } = await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
       const express = (await import('express')).default;
       
       const port = parseInt(process.env.PORT || '3000');
       const app = express();
       
+      // Important: Add JSON body parser middleware
+      app.use(express.json());
+      
       console.error(`Starting Strava MCP Server on HTTP port ${port}...`);
+      
+      // Store active transports by session
+      const transports = new Map<string, any>();
       
       // Health check endpoint
       app.get('/health', (_req, res) => {
@@ -212,21 +218,55 @@ async function startServer() {
           status: 'ok', 
           name: 'Strava MCP Server',
           version: '1.0.0',
-          transport: 'SSE'
+          transport: 'StreamableHTTP'
         });
       });
       
-      // SSE endpoint
+      // Streamable HTTP endpoint - handles POST messages
+      app.post('/message', async (req, res) => {
+        console.error('New StreamableHTTP POST request received');
+        
+        try {
+          const sessionId = req.body?.sessionId || 'default';
+          
+          // Get or create transport for this session
+          let transport = transports.get(sessionId);
+          if (!transport) {
+            console.error(`Creating new transport for session: ${sessionId}`);
+            transport = new StreamableHTTPServerTransport({
+              sessionId,
+              endpoint: '/message'
+            });
+            transports.set(sessionId, transport);
+            
+            // Connect server to transport
+            await server.connect(transport);
+          }
+          
+          // Handle the incoming message
+          await transport.handlePostMessage(req, res);
+          
+        } catch (error) {
+          console.error('Error handling message:', error);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Internal server error' });
+          }
+        }
+      });
+      
+      // Legacy SSE endpoint for backward compatibility (optional)
       app.get('/sse', async (_req, res) => {
-        console.error('New SSE connection request received');
-        const transport = new SSEServerTransport('/sse', res);
-        await server.connect(transport);
+        console.error('⚠️  SSE endpoint called but deprecated. Use StreamableHTTP /message instead.');
+        res.status(404).json({ 
+          error: 'SSE transport is deprecated',
+          message: 'Please use StreamableHTTP transport at /message endpoint'
+        });
       });
       
       app.listen(port, () => {
         console.error(`Strava MCP Server listening on port ${port}`);
         console.error(`Health check: http://localhost:${port}/health`);
-        console.error(`SSE endpoint: http://localhost:${port}/sse`);
+        console.error(`StreamableHTTP endpoint: http://localhost:${port}/message`);
       });
     } else {
       // Stdio transport for local development

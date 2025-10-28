@@ -5,12 +5,9 @@ services:
     image: ghcr.io/emiliermottet/strava-mcp:latest
     container_name: strava-mcp-server
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      # Strava API credentials
-      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
-      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
-      - STRAVA_ACCESS_TOKEN=${STRAVA_ACCESS_TOKEN}
-      - STRAVA_REFRESH_TOKEN=${STRAVA_REFRESH_TOKEN}
       # Optional: Export path for GPX/TCX files
       - ROUTE_EXPORT_PATH=/app/exports
       # Enable HTTP/SSE mode for metaMCP integration
@@ -21,8 +18,10 @@ services:
       - ./strava-exports:/app/exports
       # Mount .env file for persistent token storage
       - ./.env:/app/.env
-    ports:
-      - "3000:3000"
+    # Port 3000 is only accessible within the Docker network (not exposed to localhost)
+    # Uncomment the following line only if you need to test locally outside Docker
+    # ports:
+    #   - "3000:3000"
     stdin_open: true
     tty: true
     healthcheck:

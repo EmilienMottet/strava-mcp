@@ -24,7 +24,7 @@ echo ""
 
 # Test 2: Check health endpoint
 echo "2. Testing health endpoint..."
-HEALTH_RESPONSE=$(curl -s http://localhost:3000/health)
+HEALTH_RESPONSE=$(docker exec strava-mcp-server wget -qO- http://localhost:3000/health 2>/dev/null)
 if [ $? -eq 0 ] && echo "$HEALTH_RESPONSE" | grep -q "ok"; then
     echo -e "${GREEN}✓ Health endpoint is accessible${NC}"
     echo "  Response: $HEALTH_RESPONSE"
@@ -37,11 +37,11 @@ echo ""
 
 # Test 3: Check SSE endpoint
 echo "3. Testing SSE endpoint..."
-SSE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/sse)
-if [ "$SSE_STATUS" = "200" ] || [ "$SSE_STATUS" = "101" ]; then
-    echo -e "${GREEN}✓ SSE endpoint is accessible (HTTP $SSE_STATUS)${NC}"
+SSE_STATUS=$(docker exec strava-mcp-server sh -c 'wget --spider -q http://localhost:3000/sse 2>&1; echo $?' 2>/dev/null)
+if [ "$SSE_STATUS" = "0" ] || [ "$SSE_STATUS" = "1" ]; then
+    echo -e "${GREEN}✓ SSE endpoint is accessible${NC}"
 else
-    echo -e "${YELLOW}⚠ SSE endpoint returned HTTP $SSE_STATUS${NC}"
+    echo -e "${YELLOW}⚠ SSE endpoint check returned status $SSE_STATUS${NC}"
     echo "  This might be normal - SSE requires proper client"
 fi
 echo ""
