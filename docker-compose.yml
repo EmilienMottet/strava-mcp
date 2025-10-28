@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  strava-mcp:
+    image: ghcr.io/r-huijts/strava-mcp:latest
+    container_name: strava-mcp-server
+    restart: unless-stopped
+    environment:
+      # Strava API credentials
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
+      - STRAVA_ACCESS_TOKEN=${STRAVA_ACCESS_TOKEN}
+      - STRAVA_REFRESH_TOKEN=${STRAVA_REFRESH_TOKEN}
+      # Optional: Export path for GPX/TCX files
+      - ROUTE_EXPORT_PATH=/app/exports
+    volumes:
+      # Mount a volume for route exports (optional)
+      - ./strava-exports:/app/exports
+      # Mount .env file for persistent token storage
+      - ./.env:/app/.env
+    # For stdio-based MCP, we don't need to expose ports
+    # but you can uncomment if needed for debugging
+    # ports:
+    #   - "3000:3000"
+    stdin_open: true
+    tty: true
+
+# If you're using this with metaMCP, you might want to add networking
+networks:
+  default:
+    name: metamcp-network
+    external: true

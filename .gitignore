@@ -6,6 +6,11 @@ dist/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
+
+# Docker volumes
+strava-exports/
 
 # Log files
 npm-debug.log*

@@ -103,12 +103,26 @@ Skipping steps or performing them out of order may result in environment variabl
 
 ## Installation & Setup
 
-1. **Prerequisites:**
-   - Node.js (v18 or later recommended)
-   - npm (usually comes with Node.js)
-   - A Strava Account
+### Prerequisites
+- Node.js (v18 or later recommended) OR Docker
+- npm (usually comes with Node.js)
+- A Strava Account
 
-### 1. From Source
+### Option 1: Using Docker (Recommended)
+
+The easiest way to run the Strava MCP server is using Docker:
+
+```bash
+# Pull the latest image from GitHub Container Registry
+docker pull ghcr.io/r-huijts/strava-mcp:latest
+
+# Run with docker-compose (see docker-compose.yml)
+docker-compose up -d
+```
+
+See [DOCKER.md](DOCKER.md) for detailed Docker deployment instructions, including how to use with metaMCP.
+
+### Option 2: From Source
 
 1. **Clone Repository:**
    ```bash
